@@ -1,0 +1,91 @@
+name: Build & Publish Daily Podcast
+
+on:
+  schedule:
+    # GitHub cron is UTC. 10:00 UTC ≈ 07:00 America/Sao_Paulo (no DST).
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg wget unzip
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download Piper (x86_64 Linux)
+        run: |
+          mkdir -p piper && cd piper
+          PIPER_VER=v1.2.0
+          wget -q https://github.com/rhasspy/piper/releases/download/$PIPER_VER/piper_linux_x86_64.tar.gz
+          tar -xzf piper_linux_x86_64.tar.gz
+          echo "PIPER_BIN=$PWD/piper/piper" >> $GITHUB_ENV
+
+      - name: Download Piper voice
+        run: |
+          mkdir -p voices && cd voices
+          # Choose a voice below. Examples:
+          # pt-BR female: br-pt-faber (community) or pt-BR/glow_tts models if available in releases
+          # en-US neutral: en_US-lessac-high
+          wget -q https://github.com/rhasspy/piper/releases/download/v1.2.0/en_US-lessac-high.onnx
+          wget -q https://github.com/rhasspy/piper/releases/download/v1.2.0/en_US-lessac-high.onnx.json
+          echo "PIPER_VOICE=$PWD/en_US-lessac-high.onnx" >> $GITHUB_ENV
+
+      - name: Run podcast builder
+        env:
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          GMAIL_LABEL: ${{ secrets.GMAIL_LABEL }}
+          PODCAST_TITLE: ${{ secrets.PODCAST_TITLE }}
+          PODCAST_AUTHOR: ${{ secrets.PODCAST_AUTHOR }}
+          PODCAST_LANG: ${{ secrets.PODCAST_LANG }}
+          HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PIPER_BIN: ${{ env.PIPER_BIN }}
+          PIPER_VOICE: ${{ env.PIPER_VOICE }}
+        run: |
+          python -m src.main --since 1d --max_items 12 --voice "$PIPER_VOICE" --piper "$PIPER_BIN"
+
+      - name: Create GitHub Release and upload episode
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EP_DATE=$(date -u +"%Y-%m-%d")
+          TAG="episode-$EP_DATE"
+          gh release create "$TAG" -n "Automated daily episode $EP_DATE" || true
+          gh release upload "$TAG" output/episode.mp3 --clobber
+
+      - name: Update feed.xml with release MP3 URL
+        run: |
+          python -m src.feed --update --tag "episode-$(date -u +"%Y-%m-%d")"
+
+      - name: Commit feed and notes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add feed.xml output/notes.md output/script.md || true
+          git commit -m "daily: update feed and notes" || true
+          git push || true
