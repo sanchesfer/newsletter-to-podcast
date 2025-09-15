@@ -36,21 +36,36 @@ jobs:
 
       - name: Download Piper (x86_64 Linux)
         run: |
+          set -euo pipefail
           mkdir -p piper && cd piper
-          PIPER_VER=v1.2.0
-          wget -q https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/piper_linux_x86_64.tar.gz
-          tar -xzf piper_linux_x86_64.tar.gz
-          echo "PIPER_BIN=$PWD/piper" >> $GITHUB_ENV
+          PIPER_VER="v1.2.0"
+          ASSET="piper_linux_x86_64.tar.gz"
+          URL="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/${ASSET}"
+
+          echo "Fetching Piper from: $URL"
+          curl -L --fail -o "${ASSET}" "${URL}"
+          ls -lh "${ASSET}"
+
+          tar -xzf "${ASSET}"
+          test -x ./piper || { echo "piper binary missing after extract"; exit 1; }
+
+          echo "PIPER_BIN=$PWD/piper" >> "$GITHUB_ENV"
 
       - name: Download Piper voice
         run: |
+          set -euo pipefail
           mkdir -p voices && cd voices
-          # Choose a voice below. Examples:
-          # pt-BR female: br-pt-faber (community) or pt-BR/glow_tts models if available in releases
-          # en-US neutral: en_US-lessac-high
-          wget -q https://github.com/rhasspy/piper/releases/download/v1.2.0/en_US-lessac-high.onnx
-          wget -q https://github.com/rhasspy/piper/releases/download/v1.2.0/en_US-lessac-high.onnx.json
-          echo "PIPER_VOICE=$PWD/en_US-lessac-high.onnx" >> $GITHUB_ENV
+          PIPER_VER="v1.2.0"
+
+          # Pick ONE voice. Example (English). Swap to a pt-BR voice if you prefer.
+          VOICE="en_US-lessac-high"
+          BASE="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}"
+
+          curl -L --fail -o "${VOICE}.onnx"       "${BASE}/${VOICE}.onnx"
+          curl -L --fail -o "${VOICE}.onnx.json"  "${BASE}/${VOICE}.onnx.json"
+          ls -lh
+
+          echo "PIPER_VOICE=$PWD/${VOICE}.onnx" >> "$GITHUB_ENV"
 
       - name: Run podcast builder
         env:
