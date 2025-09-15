@@ -38,9 +38,9 @@ jobs:
         run: |
           mkdir -p piper && cd piper
           PIPER_VER=v1.2.0
-          wget -q https://github.com/rhasspy/piper/releases/download/$PIPER_VER/piper_linux_x86_64.tar.gz
+          wget -q https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/piper_linux_x86_64.tar.gz
           tar -xzf piper_linux_x86_64.tar.gz
-          echo "PIPER_BIN=$PWD/piper/piper" >> $GITHUB_ENV
+          echo "PIPER_BIN=$PWD/piper" >> $GITHUB_ENV
 
       - name: Download Piper voice
         run: |
