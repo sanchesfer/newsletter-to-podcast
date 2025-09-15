@@ -1,0 +1,13 @@
+beautifulsoup4==4.12.3
+readability-lxml==0.8.1
+requests==2.32.3
+lxml==5.3.0
+feedgen==1.0.0
+pydub==0.25.1
+transformers==4.43.3
+torch==2.3.1
+sentencepiece==0.2.0
+google-api-python-client==2.136.0
+google-auth==2.34.0
+google-auth-oauthlib==1.2.1
+pyloudnorm==0.1.1
