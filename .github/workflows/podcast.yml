@@ -68,7 +68,7 @@ jobs:
 
       # Upload artifacts for debugging (optional)
       - name: Upload outputs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: podcast-output
           path: output/
