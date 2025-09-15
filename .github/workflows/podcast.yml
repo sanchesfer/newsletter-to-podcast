@@ -38,8 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p piper && cd piper
-          PIPER_VER="v1.2.0"
-          URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz"
+          PIPER_VER="2023.11.14-2"
+          URL="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/piper_linux_x86_64.tar.gz"
           echo "Fetching: $URL"
           curl -L --fail -o piper_linux_x86_64.tar.gz "$URL"
           ls -lh piper_linux_x86_64.tar.gz
@@ -51,9 +51,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p voices && cd voices
-          PIPER_VER="v1.2.0"
+          PIPER_VER="2023.11.14-2"
           VOICE="en_US-lessac-high"   # swap for a pt-BR voice if you want
-          BASE="https://github.com/rhasspy/piper/releases/download/2023.11.14-2"
+          BASE="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}"
           curl -L --fail -o "${VOICE}.onnx"      "${BASE}/${VOICE}.onnx"
           curl -L --fail -o "${VOICE}.onnx.json" "${BASE}/${VOICE}.onnx.json"
           ls -lh
