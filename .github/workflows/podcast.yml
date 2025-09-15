@@ -1,98 +1,83 @@
 name: Build & Publish Daily Podcast
 
 on:
+  workflow_dispatch:     # manual trigger
   schedule:
-    # GitHub cron is UTC. 10:00 UTC ≈ 07:00 America/Sao_Paulo (no DST).
-    - cron: '0 12 * * *'
-  workflow_dispatch: {}
+    - cron: "0 12 * * *" # runs daily at 12:00 UTC
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # Checkout repo
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
+      # Set up Python
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
+      # Install system dependencies
       - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg wget unzip
+          sudo apt-get install -y ffmpeg espeak-ng
 
+      # Cache pip
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
+      # Install Python deps (your repo requirements + Piper)
       - name: Install Python deps
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install piper-tts
 
-      - name: Download Piper (x86_64 Linux)
+      # Download English voice
+      - name: Download English voice
         run: |
-          set -euo pipefail
-          mkdir -p piper && cd piper
-          PIPER_VER="2023.11.14-2"
-          URL="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/piper_linux_x86_64.tar.gz"
-          echo "Fetching: $URL"
-          curl -L --fail -o piper_linux_x86_64.tar.gz "$URL"
-          ls -lh piper_linux_x86_64.tar.gz
-          tar -xzf piper_linux_x86_64.tar.gz
-          test -x ./piper || { echo "piper binary missing after extract"; exit 1; }
-          echo "PIPER_BIN=$PWD/piper" >> "$GITHUB_ENV"
+          mkdir -p voices
+          # You can change this voice to any from HuggingFace (en_US-lessac-high is a good default)
+          python3 -m piper.download_voices --voice en_US-lessac-high --output-dir voices
+          ls -R voices
+          echo "PIPER_VOICE=$PWD/voices/en_US/lessac/high/en_US-lessac-high.onnx" >> $GITHUB_ENV
 
-      - name: Download Piper voice
-        run: |
-          set -euo pipefail
-          mkdir -p voices && cd voices
-          PIPER_VER="2023.11.14-2"
-          VOICE="en_US-lessac-high"   # swap for a pt-BR voice if you want
-          BASE="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}"
-          curl -L --fail -o "${VOICE}.onnx"      "${BASE}/${VOICE}.onnx"
-          curl -L --fail -o "${VOICE}.onnx.json" "${BASE}/${VOICE}.onnx.json"
-          ls -lh
-          echo "PIPER_VOICE=$PWD/${VOICE}.onnx" >> "$GITHUB_ENV"
-
-      - name: Run podcast builder
+      # Build podcast
+      - name: Build Podcast
         env:
-          PIPER_BIN: ${{ env.PIPER_BIN }}
-          PIPER_VOICE: ${{ env.PIPER_VOICE }}
           GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
           GMAIL_LABEL: ${{ secrets.GMAIL_LABEL }}
           PODCAST_TITLE: ${{ secrets.PODCAST_TITLE }}
-          PODCAST_AUTHOR: ${{ secrets.PODCAST_AUTHOR }}
-          PODCAST_LANG: ${{ secrets.PODCAST_LANG }}
           HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python -m src.main --since 1d --max_items 12 --voice "$PIPER_VOICE" --piper "$PIPER_BIN"
+          mkdir -p output
+          python3 src/main.py \
+            --piper "$(which piper)" \
+            --voice "$PIPER_VOICE"
 
-      - name: Create GitHub Release and upload episode
+      # Upload artifacts for debugging (optional)
+      - name: Upload outputs
+        uses: actions/upload-artifact@v3
+        with:
+          name: podcast-output
+          path: output/
+
+      # (Optional) Create a GitHub Release with episode.mp3
+      - name: Release episode
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "episode-${{ github.run_id }}"
+          files: output/episode.mp3
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          EP_DATE=$(date -u +"%Y-%m-%d")
-          TAG="episode-$EP_DATE"
-          gh release create "$TAG" -n "Automated daily episode $EP_DATE" || true
-          gh release upload "$TAG" output/episode.mp3 --clobber
-
-      - name: Update feed.xml with release MP3 URL
-        run: |
-          python -m src.feed --update --tag "episode-$(date -u +"%Y-%m-%d")"
-
-      - name: Commit feed and notes
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add feed.xml output/notes.md output/script.md || true
-          git commit -m "daily: update feed and notes" || true
-          git push || true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
