@@ -39,16 +39,12 @@ jobs:
           set -euo pipefail
           mkdir -p piper && cd piper
           PIPER_VER="v1.2.0"
-          ASSET="piper_linux_x86_64.tar.gz"
-          URL="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/${ASSET}"
-
-          echo "Fetching Piper from: $URL"
-          curl -L --fail -o "${ASSET}" "${URL}"
-          ls -lh "${ASSET}"
-
-          tar -xzf "${ASSET}"
+          URL="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}/piper_linux_x86_64.tar.gz"
+          echo "Fetching: $URL"
+          curl -L --fail -o piper_linux_x86_64.tar.gz "$URL"
+          ls -lh piper_linux_x86_64.tar.gz
+          tar -xzf piper_linux_x86_64.tar.gz
           test -x ./piper || { echo "piper binary missing after extract"; exit 1; }
-
           echo "PIPER_BIN=$PWD/piper" >> "$GITHUB_ENV"
 
       - name: Download Piper voice
@@ -56,19 +52,17 @@ jobs:
           set -euo pipefail
           mkdir -p voices && cd voices
           PIPER_VER="v1.2.0"
-
-          # Pick ONE voice. Example (English). Swap to a pt-BR voice if you prefer.
-          VOICE="en_US-lessac-high"
+          VOICE="en_US-lessac-high"   # swap for a pt-BR voice if you want
           BASE="https://github.com/rhasspy/piper/releases/download/${PIPER_VER}"
-
-          curl -L --fail -o "${VOICE}.onnx"       "${BASE}/${VOICE}.onnx"
-          curl -L --fail -o "${VOICE}.onnx.json"  "${BASE}/${VOICE}.onnx.json"
+          curl -L --fail -o "${VOICE}.onnx"      "${BASE}/${VOICE}.onnx"
+          curl -L --fail -o "${VOICE}.onnx.json" "${BASE}/${VOICE}.onnx.json"
           ls -lh
-
           echo "PIPER_VOICE=$PWD/${VOICE}.onnx" >> "$GITHUB_ENV"
 
       - name: Run podcast builder
         env:
+          PIPER_BIN: ${{ env.PIPER_BIN }}
+          PIPER_VOICE: ${{ env.PIPER_VOICE }}
           GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
