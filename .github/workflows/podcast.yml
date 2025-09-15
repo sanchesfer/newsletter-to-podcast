@@ -73,8 +73,6 @@ jobs:
           HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PIPER_BIN: ${{ env.PIPER_BIN }}
-          PIPER_VOICE: ${{ env.PIPER_VOICE }}
         run: |
           python -m src.main --since 1d --max_items 12 --voice "$PIPER_VOICE" --piper "$PIPER_BIN"
 
