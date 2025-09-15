@@ -62,9 +62,10 @@ jobs:
           HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
         run: |
           mkdir -p output
-          python3 src/main.py \
-            --piper "$(which piper)" \
-            --voice "$PIPER_VOICE"
+          PYTHONPATH=. python3 src/main.py \
+            --piper "$PIPER_BIN" \
+            --voice "$PIPER_VOICE" \
+            --max_items 10
 
       # Upload artifacts for debugging (optional)
       - name: Upload outputs
