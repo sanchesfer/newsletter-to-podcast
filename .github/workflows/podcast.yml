@@ -46,10 +46,10 @@ jobs:
       - name: Download English voice
         run: |
           mkdir -p voices
-          # You can change this voice to any from HuggingFace (en_US-lessac-high is a good default)
-          python3 -m piper.download_voices --voice en_US-lessac-high --output-dir voices
+          python3 -m piper.download_voices en_US-lessac-high --download-dir voices
           ls -R voices
           echo "PIPER_VOICE=$PWD/voices/en_US/lessac/high/en_US-lessac-high.onnx" >> $GITHUB_ENV
+          echo "PIPER_BIN=$(which piper)" >> $GITHUB_ENV
 
       # Build podcast
       - name: Build Podcast
