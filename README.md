@@ -1,77 +1,88 @@
-Fintech Daily Briefing 🎙️
+# Fintech Daily Briefing 🎙️
 
-An automated pipeline that turns your daily fintech newsletters into a podcast episode, published via RSS (Spotify, Apple Podcasts, etc).
+An automated podcast generator that turns daily fintech newsletters into a Spotify-ready audio show.
 
-Each episode is generated with AI narration using Piper TTS and script drafting from an LLM (e.g., Gemini or ChatGPT).
+Each day:
+1. Fetches recent fintech newsletters from Gmail.
+2. Uses AI (Gemini or local fallback) to generate a podcast script.
+3. Converts the script to audio with [Piper TTS](https://github.com/rhasspy/piper).
+4. Builds an RSS feed so Spotify/Apple Podcasts can ingest the episodes.
 
-⸻
+---
 
-# Features
-	•	📧 Fetches newsletters from Gmail (by label).
-	•	🧠 Uses an LLM with your custom prompt to turn raw text into a podcast script.
-	•	🗣️ Converts script to natural speech (Piper TTS).
-	•	🎵 Produces normalized .mp3 episodes.
-	•	📰 Creates HTML notes for Spotify/Apple descriptions.
-	•	📡 Updates an RSS feed (feed.xml) automatically.
-	•	⚙️ Runs daily via GitHub Actions.
+## Features
+- ✅ Pulls newsletters directly from Gmail  
+- ✅ Deduplicates overlapping stories across sources  
+- ✅ AI-generated script, tuned for fintech operators & investors  
+- ✅ TTS with natural pauses between stories  
+- ✅ Automated GitHub Action builds & publishes daily  
+- ✅ RSS feed (`feed.xml`) served via GitHub Pages → publish to Spotify  
 
-⸻
-# Setup & Usage
-<pre>
-# 1. Clone your repo
+---
+
+## Setup
+
+Clone the repo and install dependencies:
+
+```bash
 git clone https://github.com/<your-username>/newsletter-to-podcast.git
 cd newsletter-to-podcast
-
-# 2. Create a virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
-
-# 3. Install dependencies
-pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-# 4. Download a Piper voice (example: Ryan, male US English)
-mkdir -p voices
-python -m piper.download_voices en_US-ryan-high --download-dir voices
+Configure Gmail API credentials and Gemini API key in `.env` or GitHub secrets:
+- `GMAIL_CLIENT_ID`
+- `GMAIL_CLIENT_SECRET`
+- `GMAIL_REFRESH_TOKEN`
+- `GMAIL_LABEL` (e.g. `Fintech`)
+- `PODCAST_TITLE`
+- `HOST_PUBLIC_BASE`
 
-# 5. Export environment variables (replace with your real values)
-export GMAIL_CLIENT_ID="xxx"
-export GMAIL_CLIENT_SECRET="xxx"
-export GMAIL_REFRESH_TOKEN="xxx"
-export GMAIL_LABEL="Fintech"
-export PODCAST_TITLE="Fintech Daily Briefing"
-export HOST_PUBLIC_BASE="https://yourdomain.com/podcast"
+Run locally:
 
-# 6. Run locally (generate script + audio)
+```bash
 PYTHONPATH=. python src/main.py \
   --piper "$(which piper)" \
-  --voice "$(pwd)/voices/en_US-ryan-high.onnx" \
+  --voice voices/en_US-lessac-high.onnx \
   --prompt_file prompts/host_style.txt \
   --llm_full_text
+```
 
-# 7. Resume audio only (skip fetching & LLM, reuse last script)
-PYTHONPATH=. python src/main.py \
-  --piper "$(which piper)" \
-  --voice "$(pwd)/voices/en_US-ryan-high.onnx" \
-  --resume
-</pre>
-⸻
+This will:
+- Fetch newsletters from the past day (`--since 1d` by default)  
+- Generate `output/script.md` (the episode script)  
+- Generate `output/episode.mp3` (the podcast audio)  
+- Generate `output/notes.html` (episode description for Spotify)  
 
-# GitHub Actions (Automation)
-	•	A workflow (.github/workflows/podcast.yml) runs daily on schedule.
-	•	It builds the episode, uploads episode.mp3 to Releases, and updates the RSS feed.
-	•	Spotify/Apple pull from your hosted feed.xml.
+---
 
-⸻
+## GitHub Actions Automation
 
-# Notes
-	•	Secrets (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, HOST_PUBLIC_BASE, etc.) must be set in GitHub repo → Settings → Secrets.
-	•	Output files are stored in /output:
-	•	episode.mp3 → Final podcast audio.
-	•	script.md → Full LLM script for the episode.
-	•	notes.html → Episode description (Spotify/Apple).
-	•	feed.xml → Podcast RSS feed.
+A workflow (`.github/workflows/podcast.yml`) is included.  
+It runs daily on schedule (`cron`) or manually, then:
 
-⸻
+- Fetches Gmail newsletters  
+- Generates script + audio  
+- Uploads `episode.mp3` as a GitHub Release  
+- Updates `feed.xml` for Spotify  
 
-👉 Do you want me to also include a section with Spotify integration steps (how to take feed.xml and register it in Spotify for Podcasters)?
+---
+
+## Publishing to Spotify
+
+1. Enable GitHub Pages on your repo (serve `feed.xml` from `/`).  
+2. Copy the public feed URL:  
+   ```
+   https://<your-username>.github.io/newsletter-to-podcast/feed.xml
+   ```
+3. Go to [Spotify for Podcasters](https://podcasters.spotify.com/), add this RSS feed.  
+4. Each GitHub Action run will publish a new episode automatically.
+
+---
+
+## Notes
+- Episode names follow **“Month Day Year”** (e.g., *March 5 2025*).  
+- Descriptions come from `output/notes.html`.  
+- Entirely AI-generated — both the script and narration.  
