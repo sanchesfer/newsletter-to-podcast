@@ -1,80 +1,95 @@
 name: Build & Publish Daily Podcast
 
 on:
-  workflow_dispatch:     # manual trigger
+  workflow_dispatch: {}                  # manual trigger
   schedule:
-    - cron: "0 12 * * *" # runs daily at 12:00 UTC
+    - cron: "0 12 * * *"                 # daily at 12:00 UTC (adjust as you like)
+
+permissions:
+  contents: write                        # required for Release step
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
+      # 1) Checkout
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Set up Python
+      # 2) Python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # Install system dependencies
+      # 3) System deps (ffmpeg for audio)
       - name: Install system deps
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng
 
-      # Cache pip
+      # 4) Cache pip
       - name: Cache pip
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Install Python deps (your repo requirements + Piper)
+      # 5) Python deps
       - name: Install Python deps
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r requirements.txt
-          python3 -m pip install piper-tts
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install piper-tts
 
-      # Download English voice
-      - name: Download English voice
+      # 6) Download male English voice (hfc)
+      - name: Download Piper voice (en_US-hfc_male-medium)
         run: |
           mkdir -p voices
-          python3 -m piper.download_voices en_US-lessac-high --download-dir voices
-          ls -R voices
-          echo "PIPER_VOICE=$PWD/voices/en_US/lessac/high/en_US-lessac-high.onnx" >> $GITHUB_ENV
+          python -m piper.download_voices en_US-hfc_male-medium --download-dir voices
+          ls -l voices
+          echo "PIPER_VOICE=$PWD/voices/en_US-hfc_male-medium.onnx" >> $GITHUB_ENV
           echo "PIPER_BIN=$(which piper)" >> $GITHUB_ENV
 
-      # Build podcast
+      # 7) Build podcast (LLM full text, pauses enabled)
       - name: Build Podcast
         env:
-          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          # Gmail auth (REQUIRED)
+          GMAIL_CLIENT_ID:     ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
-          GMAIL_LABEL: ${{ secrets.GMAIL_LABEL }}
-          PODCAST_TITLE: ${{ secrets.PODCAST_TITLE }}
-          HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
+          # Label to read
+          GMAIL_LABEL:         ${{ secrets.GMAIL_LABEL }}   # e.g. "Fintech"
+          # Podcast meta (optional but useful)
+          PODCAST_TITLE:       ${{ secrets.PODCAST_TITLE }} # e.g. "Fintech Daily Briefing"
+          PODCAST_LANG:        ${{ secrets.PODCAST_LANG }}  # e.g. "en-US"
+          # Gemini (optional; only if you use LLM mode)
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          # Public hosting base for feed (if you publish a feed)
+          HOST_PUBLIC_BASE:    ${{ secrets.HOST_PUBLIC_BASE }}
         run: |
           mkdir -p output
-          PYTHONPATH=. python3 src/main.py \
+          # Full run, using your prompt + full-text mode; remove flags if you want local-only
+          PYTHONPATH=. python src/main.py \
             --piper "$PIPER_BIN" \
             --voice "$PIPER_VOICE" \
-            --max_items 10
+            --prompt_file prompts/host_style.txt \
+            --llm_full_text \
+            --since 1d \
+            --pause_ms 1400 \
+            --extra_pause_after_open_ms 600
 
-      # Upload artifacts for debugging (optional)
+      # 8) Upload outputs as artifacts (handy for debugging)
       - name: Upload outputs
         uses: actions/upload-artifact@v4
         with:
           name: podcast-output
           path: output/
 
-      # (Optional) Create a GitHub Release with episode.mp3
+      # 9) (Optional) Create a Release with episode.mp3
       - name: Release episode
         uses: softprops/action-gh-release@v1
         with:
