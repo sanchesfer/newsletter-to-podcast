@@ -100,15 +100,9 @@ def build_items(gmail_label: str, since_days: int):
 
 
 def write_notes_html(items, script_text=None):
-    """
-    Write Spotify-friendly episode notes as HTML.
-    - Includes a short overview (from the cold open / first non-empty line of script)
-    - Bulleted list of stories with sources
-    - Footer line
-    """
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Pull a 1–2 sentence overview from the first non-empty line of the script
+    # First non-empty line of the script as overview
     overview = ""
     if script_text:
         for line in script_text.splitlines():
@@ -116,7 +110,6 @@ def write_notes_html(items, script_text=None):
                 overview = line.strip()
                 break
 
-    # Build HTML
     html = []
     html.append("<!doctype html>")
     html.append("<meta charset='utf-8'>")
@@ -135,7 +128,7 @@ def write_notes_html(items, script_text=None):
     html.append("</ul>")
 
     html.append("<hr style='border:none;border-top:1px solid #e5e7eb;margin:16px 0'>")
-    html.append("<p>🎧 Thanks for listening! Follow for more daily fintech updates.</p>")
+    html.append("<p>🎧 This episode was generated with AI from fintech newsletters.</p>")
     html.append("</div>")
 
     (OUT_DIR / "notes.html").write_text("\n".join(html), encoding="utf-8")
@@ -288,7 +281,7 @@ def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "script.md").write_text(script, encoding="utf-8")
     log(f"Wrote script.md ({len(script)} chars)")
-    write_notes(items, script)
+    write_notes_html(items, script)
     log("Wrote notes.md")
 
     if args.dry_run:
