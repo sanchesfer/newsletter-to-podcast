@@ -21,10 +21,10 @@ def _today_title() -> str:
     # Windows uses %#d, others use %-d
     day_fmt = "%#d" if os.name == "nt" else "%-d"
     try:
-        return now.strftime(f"%B {day_fmt} %Y")
+        return now.strftime(f"%b {day_fmt} %Y")
     except ValueError:
         # Fallback if platform doesn't support the flag
-        return now.strftime("%B %d %Y")
+        return now.strftime("%b %d %Y")
 
 
 def _public_base() -> str:
