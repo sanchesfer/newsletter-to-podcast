@@ -25,10 +25,6 @@ from src.tts import synthesize, synthesize_paragraphs
 from src.audio import ffmpeg_join_and_normalize, make_silence_wav
 from src.llm_writer import generate_script_from_prompt  # prompt-oriented LLM script
 
-# Fallback “smart podcast” (clustered) if LLM not used
-from src.story_builder import build_story
-from src.persona import host_intro, host_outro
-
 OUT_DIR = Path("output")
 
 # ---------------- Progress helpers ----------------
@@ -272,7 +268,12 @@ def main():
 
     if not script:
         log("Falling back to naive concatenation …")
-        script = "\n\n".join([host_intro()] + [it.get("summary", it["text"]) for it in items] + [host_outro()])
+        body = []
+        body.append("Welcome back to your fintech daily briefing.")  # simple intro
+        for it in items:
+            body.append(it.get("summary") or it.get("text") or it.get("title", ""))
+        body.append("That’s all for today. See you tomorrow!")  # simple outro
+        script = "\n\n".join(body)
 
     # 4) Write script and notes
     OUT_DIR.mkdir(parents=True, exist_ok=True)
