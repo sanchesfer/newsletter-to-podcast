@@ -3,6 +3,8 @@ from feedgen.feed import FeedGenerator
 from datetime import datetime, timezone
 from pathlib import Path
 from html import escape
+import urllib.request
+import xml.etree.ElementTree as ET
 import os
 import sys
 
@@ -16,14 +18,13 @@ def _env(name: str, default: str = "") -> str:
 
 
 def _today_title() -> str:
-    """Return 'Month Day Year' (e.g., 'September 22 2025') in UTC."""
+    """Return 'Mon Day Year' (e.g., 'Sep 22 2025') in UTC."""
     now = datetime.now(timezone.utc)
-    # Windows uses %#d, others use %-d
+    # Windows uses %#d, others use %-d; fall back to %d if not supported
     day_fmt = "%#d" if os.name == "nt" else "%-d"
     try:
         return now.strftime(f"%b {day_fmt} %Y")
     except ValueError:
-        # Fallback if platform doesn't support the flag
         return now.strftime("%b %d %Y")
 
 
@@ -47,11 +48,34 @@ def _public_base() -> str:
     return "https://example.com/"
 
 
+def _feed_self_url() -> str:
+    return _public_base() + "feed.xml"
+
+
+def _bootstrap_existing_feed_if_missing():
+    """
+    If feed.xml isn't in the workspace, try to fetch the live Pages feed and save it,
+    so we append instead of overwriting when possible.
+    """
+    if FEED_PATH.exists():
+        return
+    try:
+        with urllib.request.urlopen(_feed_self_url(), timeout=10) as r:
+            data = r.read()
+        if data:
+            FEED_PATH.write_bytes(data)
+    except Exception:
+        # ok to start fresh if not reachable
+        pass
+
+
 def load_or_init() -> FeedGenerator:
     """
     Initialize or load feed.xml and set core channel metadata.
     Safe to call repeatedly.
     """
+    _bootstrap_existing_feed_if_missing()
+
     fg = FeedGenerator()
     fg.load_extension("podcast")  # enables iTunes/Podcast tags
 
@@ -71,7 +95,10 @@ def load_or_init() -> FeedGenerator:
     podcast_lang = _env("PODCAST_LANG", "en-US")
 
     fg.title(podcast_title)
-    fg.link(href=_public_base(), rel="alternate")  # <-- always set channel link
+    fg.link(href=_public_base(), rel="alternate")  # required channel link
+    # Add a canonical self link for crawlers (Atom)
+    fg.load_extension("atom")
+    fg.atom_link(href=_feed_self_url(), rel="self", type="application/rss+xml")
     fg.description(podcast_desc)
     fg.language(podcast_lang)
 
@@ -85,13 +112,21 @@ def load_or_init() -> FeedGenerator:
     if owner_name or owner_email:
         fg.podcast.itunes_owner(name=owner_name or "", email=owner_email or "")
 
-    category = _env("PODCAST_CATEGORY")  # e.g., "News"
-    if category:
-        fg.podcast.itunes_category(category)
+    # Category: support "Parent>Child" or just Parent; default to Technology/News
+    raw_cat = _env("PODCAST_CATEGORY", "")
+    if ">" in raw_cat:
+        parent, child = [c.strip() for c in raw_cat.split(">", 1)]
+        fg.podcast.itunes_category(parent, child)
+    elif raw_cat:
+        fg.podcast.itunes_category(raw_cat)
+    else:
+        fg.podcast.itunes_category("Technology", "News")
 
+    # Explicit flag
     explicit = _env("PODCAST_EXPLICIT", "no").lower()  # "yes"/"no"/"clean"
     fg.podcast.itunes_explicit(explicit)
 
+    # Cover art
     cover_url = _env("PODCAST_COVER_URL")  # e.g., https://.../cover.jpg
     if cover_url:
         fg.podcast.itunes_image(cover_url)
@@ -121,19 +156,39 @@ def _read_description_html() -> str:
     return "<p>Episode notes unavailable.</p>"
 
 
+def _existing_guids() -> set[str]:
+    """Collect GUIDs already present to avoid duplicates on re-runs."""
+    s: set[str] = set()
+    if FEED_PATH.exists():
+        try:
+            root = ET.fromstring(FEED_PATH.read_bytes())
+            for it in root.findall(".//item"):
+                g = it.findtext("guid")
+                if g:
+                    s.add(g.strip())
+        except Exception:
+            pass
+    return s
+
+
 def update_feed_for_today(tag: str, *, title: str | None = None, summary_html: str | None = None) -> None:
     """
     Add a new episode item:
-    - title: defaults to 'Month Day Year'
+    - title: defaults to 'Mon Day Year' (e.g., 'Sep 22 2025')
     - description: notes.html (or provided summary_html) for Spotify
     - enclosure: GitHub Release asset for this tag
     """
     fg = load_or_init()
 
+    # DEDUPE: skip adding if this GUID already exists (e.g., re-run of same tag)
+    if tag in _existing_guids():
+        FEED_PATH.write_bytes(fg.rss_str(pretty=True))
+        return
+
     fe = fg.add_entry()
     fe.id(tag)
 
-    # Title like "September 22 2025"
+    # Title like "Sep 22 2025"
     episode_title = title or _today_title()
     fe.title(episode_title)
 
@@ -157,7 +212,7 @@ def update_feed_for_today(tag: str, *, title: str | None = None, summary_html: s
 
 if __name__ == "__main__":
     # Usage:
-    #   python -m src.feed --update --tag <TAG> [--title "September 22 2025"]
+    #   python -m src.feed --update --tag <TAG> [--title "Sep 22 2025"]
     if "--update" in sys.argv and "--tag" in sys.argv:
         tag = sys.argv[sys.argv.index("--tag") + 1]
         t = None

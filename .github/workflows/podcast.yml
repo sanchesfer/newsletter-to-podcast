@@ -98,19 +98,23 @@ jobs:
           files: output/episode.mp3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      # 9.5) Restore previous feed from GitHub Pages (so we append, not overwrite)
+
+      # 9.5) Restore previous feed.xml so we append, not overwrite
       - name: Restore previous feed.xml
         run: |
           set -euo pipefail
-          FEED_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/feed.xml"
+          OWNER_REPO="${GITHUB_REPOSITORY}"        # e.g., sanchesfer/newsletter-to-podcast
+          OWNER="${OWNER_REPO%%/*}"
+          REPO="${OWNER_REPO#*/}"
+          FEED_URL="https://${OWNER}.github.io/${REPO}/feed.xml"
           echo "Restoring feed from: $FEED_URL"
-          if curl -fsSL "$FEED_URL" -o feed.xml; then
-            echo "Restored existing feed.xml"
+          if curl -fSL --retry 3 "$FEED_URL" -o feed.xml; then
+            echo "Restored existing feed.xml ($(grep -c '<item>' feed.xml || true) items)"
           else
-            echo "No existing feed found. Starting fresh."
+            echo "No existing feed found (first run?). Starting fresh."
             : > feed.xml
           fi
+      
       # 10) Update RSS feed (title = "Month Day Year", description = notes.html)
       - name: Update RSS feed
         env:
