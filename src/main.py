@@ -240,8 +240,8 @@ def main():
         log("Normalizing & encoding → MP3 …")
         ffmpeg_join_and_normalize(wav_paths, mp3)
         log(f"MP3 done: {mp3}")
-        write_notes(items)
-        log("Wrote notes.md")
+        write_notes_html(items, script)
+        log("Wrote notes.html")
         return
 
     # 2) Summarize every item locally (unless LLM full-text mode is on)
