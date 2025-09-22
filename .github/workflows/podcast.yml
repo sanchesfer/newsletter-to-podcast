@@ -95,7 +95,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "episode-${{ github.run_id }}"
-          files: output/episode.mp3
+          files: |
+            output/episode.mp3
+            output/script.md
+            output/notes.html
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

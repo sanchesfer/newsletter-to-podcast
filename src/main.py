@@ -34,6 +34,7 @@ def log(msg: str):
 # --------------------------------------------------
 
 
+
 def parse_since(s: str) -> int:
     """
     Accepts '7d', '3', etc. Returns integer days. Defaults to 1 on parse issues.
@@ -285,6 +286,8 @@ def main():
     if args.dry_run:
         log("Dry run complete (script only).")
         return
+
+    log(f"Wrote script.md ({len(script)} chars)")
 
     # 5) TTS → wav parts with pauses → mp3
     log("Synthesizing TTS (Piper) per paragraph …")

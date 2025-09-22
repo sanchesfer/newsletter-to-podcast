@@ -31,6 +31,8 @@ TONE
 - Clear, practical, slightly witty, no slang.
 - Written for natural speech, podcast-ready.
 
+FORMAT GUARDRAILS (EXTREMELY IMPORTANT)
+- OUTPUT MUST BE 100% SPEAKABLE. DO NOT include anything that looks like stage direction, formatting, or cues.
 
 NOW WRITE THE EPISODE
 - Use the corpus exactly as evidence.
