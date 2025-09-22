@@ -59,34 +59,21 @@ jobs:
       # 7) Build podcast (script + TTS + notes.html)
       - name: Build Podcast
         env:
-          # Gmail auth
-          GMAIL_CLIENT_ID:     ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
-          GMAIL_LABEL:         ${{ secrets.GMAIL_LABEL }}   # e.g., Fintech
-
-          # Podcast metadata (optional but recommended)
-          PODCAST_TITLE:       ${{ secrets.PODCAST_TITLE }} # e.g., Fintech Daily Briefing
-          PODCAST_LANG:        ${{ secrets.PODCAST_LANG }}  # e.g., en-US
-          PODCAST_COVER_URL:   ${{ secrets.PODCAST_COVER_URL }}
-          PODCAST_OWNER_NAME:  ${{ secrets.PODCAST_OWNER_NAME }}
-          PODCAST_OWNER_EMAIL: ${{ secrets.PODCAST_OWNER_EMAIL }}
-          PODCAST_AUTHOR:      ${{ secrets.PODCAST_AUTHOR }}
-          PODCAST_CATEGORY:    ${{ secrets.PODCAST_CATEGORY }}
-          HOST_PUBLIC_BASE:    ${{ secrets.HOST_PUBLIC_BASE }}
-
-          # Gemini (optional; safe if unset — your code falls back)
-          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_LABEL: ${{ secrets.GMAIL_LABEL }}
+          PODCAST_TITLE: ${{ secrets.PODCAST_TITLE }}
+          HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           mkdir -p output
-          PYTHONPATH=. python src/main.py \
+          PYTHONPATH=. python3 src/main.py \
             --piper "$PIPER_BIN" \
             --voice "$PIPER_VOICE" \
             --prompt_file prompts/host_style.txt \
-            --llm_full_text \
-            --since 1d \
-            --pause_ms 1400 \
-            --extra_pause_after_open_ms 600
+            --llm_full_text
 
       # 8) Upload build outputs (handy for debugging / downloads)
       - name: Upload outputs
