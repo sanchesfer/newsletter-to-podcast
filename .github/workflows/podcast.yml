@@ -116,10 +116,16 @@ jobs:
       # 11) Stage site for GitHub Pages (feed at root + simple index + latest notes)
       - name: Prepare feed for Pages
         run: |
+          set -euo pipefail
           rm -rf public
-          mkdir -p public latest
+          mkdir -p public public/latest
+          # classic podcast feed name
           cp feed.xml public/feed.xml
-          cp output/notes.html public/latest/index.html
+          # optional: expose latest notes for humans
+          if [ -f output/notes.html ]; then
+            cp output/notes.html public/latest/index.html
+          fi
+          # simple landing page
           cat > public/index.html <<'HTML'
           <!doctype html>
           <meta charset="utf-8">
