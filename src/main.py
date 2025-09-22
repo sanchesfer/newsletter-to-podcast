@@ -26,7 +26,6 @@ from src.audio import ffmpeg_join_and_normalize, make_silence_wav
 from src.llm_writer import generate_script_from_prompt  # prompt-oriented LLM script
 
 # Fallback “smart podcast” (clustered) if LLM not used
-from src.topic_model import cluster_items
 from src.story_builder import build_story
 from src.persona import host_intro, host_outro
 
@@ -272,10 +271,8 @@ def main():
             print(f"[warn] LLM script generation failed: {e}. Falling back to local builder.", file=sys.stderr)
 
     if not script:
-        log("Building script locally (clustered narrative) …")
-        clusters = cluster_items(items, n_clusters=3)
-        stories = [build_story(c) for c in clusters]
-        script = "\n\n".join([host_intro()] + stories + [host_outro()])
+        log("Falling back to naive concatenation …")
+        script = "\n\n".join([host_intro()] + [it.get("summary", it["text"]) for it in items] + [host_outro()])
 
     # 4) Write script and notes
     OUT_DIR.mkdir(parents=True, exist_ok=True)
