@@ -78,25 +78,3 @@ def summarize(text: str, max_tokens: int = 180) -> str:
     )[0]["summary_text"]
 
     return final
-
-def stitch_script(items, lang: str = "en-US") -> str:
-    intro = {
-        "pt-BR": "Bem-vindo ao seu resumo diário. Aqui estão as principais notícias de hoje:",
-        "en-US": "Welcome to your daily roundup. Here are today’s top stories:",
-    }.get(lang, "Welcome to your daily roundup. Here are today’s top stories:")
-
-    lines = [intro, ""]
-    for i, it in enumerate(items, 1):
-        title = it.get("title") or "Untitled"
-        src = it.get("source") or ""
-        summ = it.get("summary") or ""
-        lines.append(f"Story {i}: {title}. {summ} (source: {src}).")
-        lines.append("")
-
-    outro = {
-        "pt-BR": "Obrigado por ouvir. Até amanhã.",
-        "en-US": "Thanks for listening. See you tomorrow.",
-    }.get(lang, "Thanks for listening. See you tomorrow.")
-
-    lines.append(outro)
-    return "\n".join(lines)
