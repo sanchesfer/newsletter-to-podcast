@@ -241,12 +241,13 @@ def main():
     # 2) Summarize every item locally (unless LLM full-text mode is on)
     if args.prompt_file and args.llm_full_text:
         log("LLM full-text mode: skipping local summarization.")
+        # Ensure each item has a 'summary' field for compatibility
+        for it in items:
+            it["summary"] = it.get("text", "")
     else:
-        log("Summarizing items …")
-        for i, it in enumerate(items, 1):
-            it["summary"] = summarize(it.get("text", ""))
-            if i % 5 == 0 or i == len(items):
-                log(f"  summarized {i}/{len(items)}")
+        log("Skipping local summarization (summarizer disabled).")
+        for it in items:
+            it["summary"] = it.get("text", "")
 
     # 3) Build the script: LLM-driven (prompt) if configured, else smart local fallback
     script = None
