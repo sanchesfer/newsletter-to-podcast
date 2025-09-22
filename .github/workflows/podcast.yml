@@ -74,13 +74,18 @@ jobs:
           LLM_PROVIDER:        ${{ secrets.LLM_PROVIDER }}        # e.g. "gemini"
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}      # if using Gemini
           OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}      # optional if using OpenAI
+          PIPER_SPEED:         "0.80"
         run: |
           mkdir -p output
           PYTHONPATH=. python3 src/main.py \
             --piper "$PIPER_BIN" \
             --voice "$PIPER_VOICE" \
             --prompt_file prompts/host_style.txt \
-            --llm_full_text
+            --llm_full_text \
+            --length_scale 0.8 \
+            --sentence_silence_ms 250 \
+            --pause_ms 1200 \
+            --extra_pause_after_open_ms 400
 
       # 8) Upload outputs (debugging / download)
       - name: Upload outputs

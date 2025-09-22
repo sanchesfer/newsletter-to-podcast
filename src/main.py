@@ -20,7 +20,7 @@ from src.cleaner import (
     hash_key,
     extract_links_from_html,  # ensure this exists; if not, remove this import
 )
-from src.tts import synthesize, synthesize_paragraphs
+from src.tts import synthesize_paragraphs
 from src.audio import ffmpeg_join_and_normalize, make_silence_wav
 from src.llm_writer import generate_script_from_prompt  # prompt-oriented LLM script
 
@@ -137,70 +137,51 @@ def split_script_into_blocks(script: str):
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Build daily fintech podcast from Gmail newsletters.")
     ap.add_argument("--since", default="1d", help="How far back to fetch (e.g., 1d, 7d).")
     ap.add_argument("--piper", required=True, help="Path to piper binary (e.g., `which piper`).")
     ap.add_argument("--voice", required=True, help="Path to a Piper .onnx voice model.")
+    ap.add_argument("--prompt_file", default=None, help="Text prompt to steer the LLM script.")
+    ap.add_argument("--dry_run", action="store_true", help="Generate script/notes only (no audio).")
+    ap.add_argument("--llm_full_text", action="store_true",
+                    help="If set with --prompt_file, send full newsletter bodies to LLM (skip local summarization).")
+    ap.add_argument("--pause_ms", type=int, default=1200,
+                    help="Silence (ms) between paragraphs.")
+    ap.add_argument("--extra_pause_after_open_ms", type=int, default=600,
+                    help="Extra silence (ms) after the cold open paragraph.")
+    ap.add_argument("--tts_speed", type=float, default=1.0,
+                    help="Piper length-scale inverse. <1.0 = slower, >1.0 = faster (e.g., 0.95).")
+    ap.add_argument("--resume", action="store_true",
+                    help="Reuse output/script.md; synthesize audio only.")
     ap.add_argument(
-        "--prompt_file",
-        default=None,
-        help="Path to a text file with your prompt to steer the script (LLM_PROVIDER required).",
+        "--length_scale",
+        type=float,
+        default=0.9,              # 90% speed (slower than default 1.0)
+        help="Piper speed control. <1.0 = faster, >1.0 = slower. Example: 0.8 ~ 80% speed.",
     )
     ap.add_argument(
-        "--dry_run",
-        action="store_true",
-        help="Generate the script only (no TTS/audio), useful for iterating on prompts.",
-    )
-    ap.add_argument(
-        "--llm_full_text",
-        action="store_true",
-        help="If set (with --prompt_file), send full newsletter bodies to the LLM and skip local summarization.",
-    )
-    ap.add_argument(
-        "--pause_ms",
+        "--sentence_silence_ms",
         type=int,
-        default=700,
-        help="Silence duration (milliseconds) inserted between paragraphs/items.",
-    )
-    ap.add_argument(
-        "--extra_pause_after_open_ms",
-        type=int,
-        default=300,
-        help="Additional silence after the first paragraph (the cold open), in milliseconds.",
-    )
-    ap.add_argument(
-        "--resume",
-        action="store_true",
-        help="Reuse output/script.md and render audio only (skip Gmail/LLM).",
+        default=200,              # small per-sentence break
+        help="Extra silence (ms) Piper inserts after sentence boundaries.",
     )
     args = ap.parse_args()
 
     # ---------- Fast path: resume from existing script ----------
     if args.resume:
         OUT_DIR.mkdir(parents=True, exist_ok=True)
-        script_path = OUT_DIR / "script.md"
-        if not script_path.exists():
-            print("[resume] output/script.md not found. Run without --resume to generate the script first.", file=sys.stderr)
-            sys.exit(1)
-
-        script = script_path.read_text(encoding="utf-8").strip()
+        script = (OUT_DIR / "script.md").read_text(encoding="utf-8").strip()
         log(f"[resume] Using existing script ({len(script)} chars)")
-        blocks = split_script_into_blocks(script)
 
-        # Synthesize per paragraph with pauses (longer pause after opener)
-        log("Synthesizing TTS (Piper) per paragraph …")
-        wav_paths = []
-        for i, block in enumerate(blocks, 1):
-            part_wav = OUT_DIR / f"part_{i:03d}.wav"
-            synthesize(block, part_wav, args.piper, args.voice)
-            wav_paths.append(part_wav)
-            if i < len(blocks):
-                sil = OUT_DIR / f"sil_{i:03d}.wav"
-                extra = args.extra_pause_after_open_ms if i == 1 else 0
-                seconds = max(0, args.pause_ms + extra) / 1000.0
-                make_silence_wav(sil, seconds=seconds)
-                wav_paths.append(sil)
-
+        wav_paths = synthesize_paragraphs(
+            script,
+            OUT_DIR,
+            args.piper,
+            args.voice,
+            pause_seconds=max(0, args.pause_ms) / 1000.0,
+            length_scale=args.length_scale,
+            sentence_silence_ms=args.sentence_silence_ms,
+        )
         mp3 = OUT_DIR / "episode.mp3"
         log("Normalizing & encoding → MP3 …")
         ffmpeg_join_and_normalize(wav_paths, mp3)
@@ -228,8 +209,13 @@ def main():
         # TTS single block
         log("Synthesizing TTS (Piper) per paragraph …")
         wav_paths = synthesize_paragraphs(
-            script, OUT_DIR, args.piper, args.voice,
-            pause_seconds=max(0, args.pause_ms) / 1000.0
+            script,
+            OUT_DIR,
+            args.piper,
+            args.voice,
+            pause_seconds=max(0, args.pause_ms) / 1000.0,
+            length_scale=args.length_scale,
+            sentence_silence_ms=args.sentence_silence_ms,
         )
         mp3 = OUT_DIR / "episode.mp3"
         log("Normalizing & encoding → MP3 …")
@@ -291,20 +277,13 @@ def main():
 
     # 5) TTS → wav parts with pauses → mp3
     log("Synthesizing TTS (Piper) per paragraph …")
-    # We want slightly longer pause after the opener
-    blocks = split_script_into_blocks(script)
-    wav_paths = []
-    for i, block in enumerate(blocks, 1):
-        part_wav = OUT_DIR / f"part_{i:03d}.wav"
-        synthesize(block, part_wav, args.piper, args.voice)
-        wav_paths.append(part_wav)
-        if i < len(blocks):
-            sil = OUT_DIR / f"sil_{i:03d}.wav"
-            extra = args.extra_pause_after_open_ms if i == 1 else 0
-            seconds = max(0, args.pause_ms + extra) / 1000.0
-            make_silence_wav(sil, seconds=seconds)
-            wav_paths.append(sil)
-
+    wav_paths = synthesize_paragraphs(
+        script,
+        OUT_DIR,
+        args.piper,
+        args.voice,
+        pause_seconds=max(0, args.pause_ms) / 1000.0,
+    )
     mp3 = OUT_DIR / "episode.mp3"
     log("Normalizing & encoding → MP3 …")
     ffmpeg_join_and_normalize(wav_paths, mp3)
