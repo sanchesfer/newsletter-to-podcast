@@ -96,9 +96,7 @@ def load_or_init() -> FeedGenerator:
 
     fg.title(podcast_title)
     fg.link(href=_public_base(), rel="alternate")  # required channel link
-    # Add a canonical self link for crawlers (Atom)
-    fg.load_extension("atom")
-    fg.atom_link(href=_feed_self_url(), rel="self", type="application/rss+xml")
+    # (Atom self-link removed; not needed for Spotify/Apple)
     fg.description(podcast_desc)
     fg.language(podcast_lang)
 
