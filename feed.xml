@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Fintech Daily Briefing</title>
+    <link>https://sanchesfer.github.io/newsletter-to-podcast/</link>
+    <description>AI-generated daily fintech podcast built from trusted newsletters. Canada/Brazil/BNPL prioritized.</description>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <generator>python-feedgen</generator>
+    <language>en-US</language>
+    <lastBuildDate>Mon, 22 Sep 2025 08:11:56 +0000</lastBuildDate>
+    <itunes:author>Fernando Sanches</itunes:author>
+    <itunes:image href="https://i.postimg.cc/5ySJwJcr/fdb.png" />
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:owner>
+      <itunes:name>Fer Sanches</itunes:name>
+      <itunes:email>sanches.fer@gmail.com</itunes:email>
+    </itunes:owner>
+    <item><title>Sep 22 2025</title><description>&lt;!doctype html&gt;
+&lt;meta charset='utf-8'&gt;
+&lt;div style='font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.45;font-size:16px;color:#111;'&gt;
+&lt;h2 style='margin:0 0 12px'&gt;Episode Notes&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Overview:&lt;/strong&gt; Welcome to Fintech Daily, where we track the code that&amp;#x27;s changing money. It’s a day of foundational shifts, from AI getting its own payment rules to the simmering debate over the future of consumer credit.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Stories covered today:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul style='margin:0 0 12px 20px'&gt;
+&lt;li&gt;#98 - Beyond Oil: The New Saudi Fintech Playbook &lt;em&gt;(via Samora Kariuki from Frontier Fintech Newsletter &amp;lt;frontierfintech@substack.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Finextra Daily News: 22 September 2025 - for Fernando Sanches &lt;em&gt;(via News from Finextra &amp;lt;newsletter@finextra.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;An untapped market for 🇨🇦 tech (The BetaKit Newsletter) &lt;em&gt;(via BetaKit &amp;lt;newsletter@betakit.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Growwing into a $9B Indian IPO (TWIF 9/21) &lt;em&gt;(via This Week in Fintech &amp;lt;noreply@thisweekinfintech.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Google’s universal payments standard for AI Agents 🤖💸🤖; Zelle owner prepares to enter the stablecoin arena 👀🪙… &lt;em&gt;(via &amp;quot;Linas Beliūnas from Linas&amp;#x27;s Newsletter&amp;quot; &amp;lt;linas@substack.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;🧠 Google Agent to Payment (AP2) Explained &lt;em&gt;(via Fintech Brainfood by Simon Taylor &amp;lt;sytaylor@mail.beehiiv.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Direct-to-Consumer EWA Still Poses &amp;quot;Debt Trap&amp;quot; Risk, New CRL Report Argues &lt;em&gt;(via Fintech Business Weekly &amp;lt;fintechbusinessweekly@substack.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Deep Dive: Google’s AP2 Explained - The Rulebook for Agent-Led Payments &lt;em&gt;(via Sam from Fintech Wrap Up &amp;lt;samboboev@substack.com&amp;gt;)&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr style='border:none;border-top:1px solid #e5e7eb;margin:16px 0'&gt;
+&lt;p&gt;🎧 This episode was generated with AI from fintech newsletters.&lt;/p&gt;
+&lt;/div&gt;</description><guid isPermaLink="false">episode-17908831346</guid><enclosure url="https://github.com/sanchesfer/newsletter-to-podcast/releases/download/episode-17908831346/episode.mp3" length="9052461" type="audio/mpeg" /><pubDate>Mon, 22 Sep 2025 08:11:56 +0000</pubDate><itunes:image href="https://i.postimg.cc/5ySJwJcr/fdb.png" /></item></channel>
+</rss>
