@@ -1,35 +1,33 @@
 name: Build & Publish Daily Podcast
 
 on:
-  workflow_dispatch: {}                  # manual trigger
+  workflow_dispatch: {}
   schedule:
-    - cron: "0 12 * * *"                 # daily at 12:00 UTC (adjust as you like)
+    - cron: "0 12 * * *"   # daily at 12:00 UTC
 
 permissions:
-  contents: write                        # required for Release step
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Checkout
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2) Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3) System deps (ffmpeg for audio)
       - name: Install system deps
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng
 
-      # 4) Cache pip
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -38,41 +36,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 5) Python deps
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install piper-tts
 
-      # 6) Download male English voice (hfc)
       - name: Download Piper voice (en_US-hfc_male-medium)
         run: |
           mkdir -p voices
           python -m piper.download_voices en_US-hfc_male-medium --download-dir voices
-          ls -l voices
           echo "PIPER_VOICE=$PWD/voices/en_US-hfc_male-medium.onnx" >> $GITHUB_ENV
           echo "PIPER_BIN=$(which piper)" >> $GITHUB_ENV
 
-      # 7) Build podcast (LLM full text, pauses enabled)
-      - name: Build Podcast
+      - name: Build podcast (script + audio + notes.html)
         env:
-          # Gmail auth (REQUIRED)
           GMAIL_CLIENT_ID:     ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
-          # Label to read
-          GMAIL_LABEL:         ${{ secrets.GMAIL_LABEL }}   # e.g. "Fintech"
-          # Podcast meta (optional but useful)
-          PODCAST_TITLE:       ${{ secrets.PODCAST_TITLE }} # e.g. "Fintech Daily Briefing"
-          PODCAST_LANG:        ${{ secrets.PODCAST_LANG }}  # e.g. "en-US"
-          # Gemini (optional; only if you use LLM mode)
+          GMAIL_LABEL:         ${{ secrets.GMAIL_LABEL }}
+          PODCAST_TITLE:       ${{ secrets.PODCAST_TITLE }}
+          PODCAST_LANG:        ${{ secrets.PODCAST_LANG }}
           GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
-          # Public hosting base for feed (if you publish a feed)
           HOST_PUBLIC_BASE:    ${{ secrets.HOST_PUBLIC_BASE }}
         run: |
           mkdir -p output
-          # Full run, using your prompt + full-text mode; remove flags if you want local-only
           PYTHONPATH=. python src/main.py \
             --piper "$PIPER_BIN" \
             --voice "$PIPER_VOICE" \
@@ -82,18 +70,45 @@ jobs:
             --pause_ms 1400 \
             --extra_pause_after_open_ms 600
 
-      # 8) Upload outputs as artifacts (handy for debugging)
-      - name: Upload outputs
+      - name: Upload outputs (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: podcast-output
           path: output/
 
-      # 9) (Optional) Create a Release with episode.mp3
-      - name: Release episode
+      # --- Publish & feed ---
+
+      - name: Create GitHub Release with MP3
+        id: release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "episode-${{ github.run_id }}"
           files: output/episode.mp3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update RSS feed (title = 'Month Day Year'; description = notes.html)
+        env:
+          GITHUB_REPOSITORY:   ${{ github.repository }}
+          PODCAST_TITLE:       ${{ secrets.PODCAST_TITLE }}
+          PODCAST_COVER_URL:   ${{ secrets.PODCAST_COVER_URL }}
+          PODCAST_OWNER_NAME:  ${{ secrets.PODCAST_OWNER_NAME }}
+          PODCAST_OWNER_EMAIL: ${{ secrets.PODCAST_OWNER_EMAIL }}
+          PODCAST_AUTHOR:      ${{ secrets.PODCAST_AUTHOR }}
+          PODCAST_CATEGORY:    ${{ secrets.PODCAST_CATEGORY }}
+          PODCAST_LANG:        ${{ secrets.PODCAST_LANG }}
+        run: |
+          python -m src.feed --update --tag "episode-${{ github.run_id }}"
+
+      - name: Prepare feed.xml for Pages
+        run: |
+          mkdir -p public
+          cp feed.xml public/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
