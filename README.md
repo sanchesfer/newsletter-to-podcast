@@ -6,7 +6,7 @@ Each episode is generated with AI narration using Piper TTS and script drafting 
 
 ⸻
 
-Features
+# Features
 	•	📧 Fetches newsletters from Gmail (by label).
 	•	🧠 Uses an LLM with your custom prompt to turn raw text into a podcast script.
 	•	🗣️ Converts script to natural speech (Piper TTS).
@@ -16,8 +16,8 @@ Features
 	•	⚙️ Runs daily via GitHub Actions.
 
 ⸻
+# Setup & Usage
 <pre>
-```bash
 # 1. Clone your repo
 git clone https://github.com/<your-username>/newsletter-to-podcast.git
 cd newsletter-to-podcast
@@ -54,18 +54,17 @@ PYTHONPATH=. python src/main.py \
   --piper "$(which piper)" \
   --voice "$(pwd)/voices/en_US-ryan-high.onnx" \
   --resume
-```
 </pre>
 ⸻
 
-GitHub Actions (Automation)
+# GitHub Actions (Automation)
 	•	A workflow (.github/workflows/podcast.yml) runs daily on schedule.
 	•	It builds the episode, uploads episode.mp3 to Releases, and updates the RSS feed.
 	•	Spotify/Apple pull from your hosted feed.xml.
 
 ⸻
 
-Notes
+# Notes
 	•	Secrets (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, HOST_PUBLIC_BASE, etc.) must be set in GitHub repo → Settings → Secrets.
 	•	Output files are stored in /output:
 	•	episode.mp3 → Final podcast audio.
