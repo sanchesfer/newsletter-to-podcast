@@ -76,23 +76,6 @@ jobs:
           echo "PIPER_VOICE=$PWD/${{ env.PIPER_VOICE_PATH }}" >> $GITHUB_ENV
           echo "PIPER_BIN=$(which piper)" >> $GITHUB_ENV
 
-      # Optional: skip work if today already released (speeds up cron runs)
-      - name: Skip if today already released
-        id: maybe-skip
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          # Look for any release today (UTC)
-          TODAY="$(date -u +%Y-%m-%d)"
-          if gh release list --limit 20 | grep -q "$TODAY"; then
-            echo "Already have a release today; skipping build."
-            echo "skip_build=true" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            echo "skip_build=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build Podcast (script + TTS + notes.html)
         if: steps.maybe-skip.outputs.skip_build == 'false'
         env:
