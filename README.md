@@ -16,7 +16,8 @@ Features
 	•	⚙️ Runs daily via GitHub Actions.
 
 ⸻
-
+<pre>
+```bash
 # 1. Clone your repo
 git clone https://github.com/<your-username>/newsletter-to-podcast.git
 cd newsletter-to-podcast
@@ -53,6 +54,8 @@ PYTHONPATH=. python src/main.py \
   --piper "$(which piper)" \
   --voice "$(pwd)/voices/en_US-ryan-high.onnx" \
   --resume
+```
+</pre>
 ⸻
 
 GitHub Actions (Automation)
