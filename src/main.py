@@ -20,7 +20,6 @@ from src.cleaner import (
     hash_key,
     extract_links_from_html,  # ensure this exists; if not, remove this import
 )
-from src.summarizer import summarize
 from src.tts import synthesize, synthesize_paragraphs
 from src.audio import ffmpeg_join_and_normalize, make_silence_wav
 from src.llm_writer import generate_script_from_prompt  # prompt-oriented LLM script
