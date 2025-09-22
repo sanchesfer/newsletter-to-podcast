@@ -1,14 +1,20 @@
 name: Build & Publish Daily Podcast
 
 on:
-  workflow_dispatch: {}                 # manual trigger
+  workflow_dispatch: {}            # manual trigger
   schedule:
-    - cron: "0 12 * * *"                # daily at 12:00 UTC (change as you like)
+    - cron: "0 12 * * *"           # daily at 12:00 UTC
 
+# Required for releases + Pages deploy
 permissions:
-  contents: write                       # needed for creating releases
-  pages: write                          # needed for GitHub Pages deploy
-  id-token: write                       # needed for Pages OIDC
+  contents: write
+  pages: write
+  id-token: write
+
+# Recommended to avoid overlapping Pages deployments
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -40,7 +46,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 5) Python deps (your reqs + piper + lxml_html_clean for readability)
+      # 5) Python deps
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
@@ -59,14 +65,15 @@ jobs:
       # 7) Build podcast (script + TTS + notes.html)
       - name: Build Podcast
         env:
-          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_ID:     ${{ secrets.GMAIL_CLIENT_ID }}
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
-          GMAIL_LABEL: ${{ secrets.GMAIL_LABEL }}
-          PODCAST_TITLE: ${{ secrets.PODCAST_TITLE }}
-          HOST_PUBLIC_BASE: ${{ secrets.HOST_PUBLIC_BASE }}
-          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_LABEL:         ${{ secrets.GMAIL_LABEL }}
+          PODCAST_TITLE:       ${{ secrets.PODCAST_TITLE }}
+          HOST_PUBLIC_BASE:    ${{ secrets.HOST_PUBLIC_BASE }}
+          LLM_PROVIDER:        ${{ secrets.LLM_PROVIDER }}        # e.g. "gemini"
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}      # if using Gemini
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}      # optional if using OpenAI
         run: |
           mkdir -p output
           PYTHONPATH=. python3 src/main.py \
@@ -75,14 +82,14 @@ jobs:
             --prompt_file prompts/host_style.txt \
             --llm_full_text
 
-      # 8) Upload build outputs (handy for debugging / downloads)
+      # 8) Upload outputs (debugging / download)
       - name: Upload outputs
         uses: actions/upload-artifact@v4
         with:
           name: podcast-output
           path: output/
 
-      # 9) Create GitHub Release with the MP3
+      # 9) Create GitHub Release with MP3
       - name: Create GitHub Release with MP3
         id: release
         uses: softprops/action-gh-release@v1
@@ -106,16 +113,35 @@ jobs:
         run: |
           python -m src.feed --update --tag "episode-${{ github.run_id }}"
 
-      # 11) Publish feed.xml to GitHub Pages
+      # 11) Stage site for GitHub Pages (feed at root + simple index + latest notes)
       - name: Prepare feed for Pages
         run: |
-          mkdir -p public
-          cp feed.xml public/
+          rm -rf public
+          mkdir -p public latest
+          cp feed.xml public/feed.xml
+          cp output/notes.html public/latest/index.html
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Fintech Daily Briefing</title>
+          <h1>Fintech Daily Briefing</h1>
+          <p>RSS feed: <a href="./feed.xml">feed.xml</a></p>
+          <p>Latest episode notes: <a href="./latest/">latest/</a></p>
+          HTML
 
+      # 12) Upload Pages artifact
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
