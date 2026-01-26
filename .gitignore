@@ -6,3 +6,10 @@ output/
 *.onnx.json
 .idea/
 .DS_Store
+.env
+*.env
+token*.json
+client_secret*.json
+*.secret*
+output/
+voices/

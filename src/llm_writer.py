@@ -57,7 +57,8 @@ def _provider_call(system_instructions: str, user_message: str) -> str:
         return _call_openai(model, key, system_instructions, user_message)
     if provider == "gemini":
         # model = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
-        model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+        # model = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+        model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         key = os.getenv("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GEMINI_API_KEY is missing")
